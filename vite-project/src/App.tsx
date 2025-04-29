@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 import { NodeComponent } from './components/node';
 import { generateNodes } from './utils';
 
@@ -24,40 +24,57 @@ const Game: React.FC = () => {
   const [gameState, setGameState] = useState<'start' | 'playing'>('start'); // Trạng thái game
   const [resultState, setResultState] = useState<'None' | 'All cleared' | 'Game over'>('None'); // Trạng thái kết quả
   const [currentNode, setCurrentNode] = useState<number>(1); // Node hiện tại
-  const [time, setTime] = useState<number>(0); // Thời gian đếm
-  const [timer, setTimer] = useState<ReturnType<typeof setInterval> | null>(null); // Cập nhật kiểu ở đây
-
+  const [timeoutIds, setTimeoutIds] = useState<number[]>([]); // Danh sách timeout
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null); // Bộ đếm thời gian
+  const timeDisplayRef = useRef<HTMLSpanElement>(null); // Thành phần hiển thị thời gian
+  
   // Khi số lượng node bị ẩn hết thì hoàn thành game
   useEffect(() => {
-    if(gameState === 'playing'){
-      
+    if (gameState === 'playing') {
       if (nodes.length === 0) {
-        clearInterval(timer!);
+        if (timerRef.current) { // Kiểm tra trước khi clear
+          clearInterval(timerRef.current);
+        }
         setGameState('start');
         setResultState('All cleared');
       }
     }
   }, [nodes]);
 
+  // Bắt đầu đếm thời gian
+  const startTimer = () => {
+    let initialTime = 0; // Thời gian ban đầu
+    // Hủy bỏ bộ đếm thời gian trước đó
+    if (timerRef.current) clearInterval(timerRef.current);
+    // Tạo bộ đếm thời gian mới
+    timerRef.current = setInterval(() => {
+      initialTime += 0.1;
+      if (timeDisplayRef.current) {
+        timeDisplayRef.current.textContent = initialTime.toFixed(1) + 's';
+      }
+    }, 100);
+  };
+
   // Bắt đầu hoặc restart game
   const handlePlay = () => {
+    // Hủy tất cả timeout trước khi reset
+    if (timeoutIds && timeoutIds.length > 0) {
+        timeoutIds.forEach((id) => clearTimeout(id));
+        setTimeoutIds([]);
+    }
+    // Kiểm tra điều kiện đầu vào
     if (points === '' || parseInt(points) <= 0) {
       alert('Please enter the number of nodes');
       return;
     }
+    // Tạo danh sách node mới
     const nodeList = generateNodes(parseInt(points));
     setNodes(nodeList);
     setCurrentNode(1);
     setGameState('playing');
     setResultState('None');
-    setTime(0);
-
     // Thiết lập bộ đếm thời gian
-    if (timer) clearInterval(timer);
-    const newTimer = setInterval(() => {
-      setTime((prevTime) => parseFloat((prevTime + 0.1).toFixed(1))); 
-    }, 100);
-    setTimer(newTimer);
+    startTimer();
   };
 
   // Xử lý khi bấm vào node
@@ -73,26 +90,16 @@ const Game: React.FC = () => {
       );
       setCurrentNode((prevCurrentNode) => prevCurrentNode + 1);
 
-      // Bắt đầu đếm ngược cho node đã bấm
-      const countdownInterval = setInterval(() => {
-        setNodes((prevNodes) =>
-          prevNodes.map((n) =>
-            n.countdown !== null && n.number === node
-              ? { ...n, countdown: parseFloat((n.countdown - 0.1).toFixed(1)) }
-              : n
-          )
-        );
-      }, 100); // Đếm ngược mỗi 100ms
-
-      // Sau khi countdown = 0 thì node sẽ biến mất
-      setTimeout(() => {
-        clearInterval(countdownInterval);
+      // Sau 2s thì node sẽ biến mất
+      const timeoutId = setTimeout(() => {
         setNodes((prevNodes) => prevNodes.filter((n) => n.number !== node));
       }, 2000);
 
+      setTimeoutIds((prev) => [...prev, timeoutId]);
+
     } else {
       // Nếu click sai node, dừng game
-      clearInterval(timer!);
+      if (timerRef.current) clearInterval(timerRef.current);
       setResultState('Game over');
     }
   };
@@ -129,7 +136,7 @@ const Game: React.FC = () => {
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <label style={{ minWidth: '50px' }}>Time:</label>
-          <span>{time.toFixed(1)}s</span>
+          <span ref={timeDisplayRef}>0.0s</span>
         </div>
 
         {gameState === 'start' ? (          

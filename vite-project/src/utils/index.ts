@@ -1,7 +1,3 @@
-export const formatTime = (timeInSeconds: number) => {
-  return timeInSeconds.toFixed(1)+'s'; 
-};
-
 export const generateNodes = (n: number): { number: number; countdown: number | null; position: { top: number; left: number }; isClicked: boolean }[] => {
     const nodesArray = Array.from({ length: n }, (_, index) => {
       const randomTop = Math.abs(Math.random() * window.innerHeight*0.8 - 50)*100/(window.innerHeight*0.8);
