@@ -2,14 +2,6 @@ import React, { useState, useEffect,useRef } from 'react';
 import { NodeComponent } from './components/node';
 import { generateNodes } from './utils';
 
-// interface GameState {
-//   points: string;
-//   nodes: Node[]; 
-//   gameState: 'start' | 'playing' | 'game over';
-//   currentNode: number;
-//   time: number;
-//   timer: ReturnType<typeof setInterval> | null;
-// }
 
 interface Node{
   number: number;
